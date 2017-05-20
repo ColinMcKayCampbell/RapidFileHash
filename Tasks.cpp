@@ -29,7 +29,7 @@ void HashTask::run() // Run hashing task
 	the_clock::time_point start = the_clock::now(); // Start timer
 	FILE * fs;
 	FILE ** filePass = &fs; // Pointer to file pointer, required for fopen_s
-	SHA256 hash;
+	SHA256 hash; // Create SHA256 hashing object (from sha256.h)
 	char * buffer;
 	int bufferSize;
 	int limit = 4096; // File read buffer limit in bytes.
@@ -40,74 +40,34 @@ void HashTask::run() // Run hashing task
 	{
 		 bufferSize = size; 
 	}
-	size_t result;
+	size_t result; 
 	int time_taken;
 	string hash_out;
-	const char* path = filePath.c_str();
-	fopen_s(filePass, path, "r");
-	if (fs != NULL) {
+	const char* path = filePath.c_str(); // Convert path string to c style strings for fopen_s
+	fopen_s(filePass, path, "r"); // Open file in read only mode
+	if (fs != NULL) { // If opened successfully
 		
-		buffer = (char*)malloc(bufferSize);
-		if (buffer == NULL) { fputs("Malloc error.\n", stderr); exit(2); }
-		while (ftell(fs) < bufferSize) {
-			fread(buffer, 1, bufferSize, fs);
-			hash.add(buffer, bufferSize);
+		buffer = (char*)malloc(bufferSize); // Allocate a buffer of char pointers
+		if (buffer == NULL) { fputs("Malloc error.\n", stderr); exit(2); } // Throw error if malloc fails
+		while (bufferSize - ftell(fs) > bufferSize) { // While there is still a full buffer left in file stream
+			fread(buffer, 1, bufferSize, fs); // Read a buffer's worth of bytes
+			hash.add(buffer, bufferSize); // Hash buffer
 		}
-		if(ftell(fs)!=size)
+		if(ftell(fs)!=size) // If the file stream has not all been accessed
 		{
-			free(buffer);
-			buffer = (char*)malloc(size - bufferSize);
-			fread(buffer, 1, size - bufferSize, fs);
-			hash.add(buffer, size - bufferSize);
+			free(buffer); // Clear buffer
+			buffer = (char*)malloc(size - bufferSize); //Reallocate buffer for remains
+			fread(buffer, 1, size - bufferSize, fs); // Read in remains
+			hash.add(buffer, size - bufferSize); // Hash remains
 		}
-		hash_out = hash.getHash();
-		fclose(fs);
-		free(buffer);
+		hash_out = hash.getHash(); // Get final hash string
+		fclose(fs); // Close file stream
+		free(buffer); 
 	}
 	the_clock::time_point end = the_clock::now(); // End timer
-	
-		/*const long int bufferSize = 128; // Bytes stored in RAM
-		unsigned char fileBuffer[bufferSize]; // Array of bytes to read in to 
-		const void* bytePoint[bufferSize]; // Point to fileBuffer for hashing function
-		int count = 0; // Counter variable
-		fstream fs; // Declare Filestream
-		SHA256 hash; // Declare hash object
-		filebuf* readIn = fs.rdbuf(); // Initialise readbuffer
-		string hash_out = ""; // Output string
-		long long time_taken = 0;
-		
-			the_clock::time_point start = the_clock::now(); // Start timer
-			fs.open(filePath, fstream::binary | fstream::in); // Open file
-			if (fs.is_open()) { // If file is open
-
-				for (int progress = 0; progress < size; progress++) { // Repeat for length of file
-
-					unsigned char byte = readIn->sbumpc(); // Get next byte (first time will take first byte)
-					fileBuffer[count] = byte; // Add byte to byte array
-					bytePoint[count] = &fileBuffer[count]; // Add to corresponding address array
-					count++; // Increment counter
-
-					if (count > bufferSize - 1) { // Once buffer is full
-						hash.add(*bytePoint, bufferSize); // Process bytes in buffer
-						count = 0; // Reset counter
-					}
-
-				} // End "progress loop"
-
-				if (count != bufferSize) { // If there are bytes left in the fileBuffer
-					hash.add(*bytePoint, count); // Process remains
-					//count = 0; // Reset counter (Used for benchmarking)
-				}
-
-			}// End "If file is open"
-			else {}
-	
-			hash_out = hash.getHash(); // Return hash as string
-			fs.close(); // Close file read
-			the_clock::time_point end = the_clock::now();
-		time_taken = duration_cast<chrono::microseconds>(end - start).count(); // Get time taken as int*/
-		farmRef->AddTask(filePath, size, time_taken, hash_out); // Send data to be written to disk
-		return;
+	time_taken = duration_cast<chrono::microseconds>(end - start).count(); // Get time taken as int*/
+	farmRef->AddTask(filePath, size, time_taken, hash_out); // Send data to be written to disk
+	return;
 	}
 
 WriteTask::WriteTask(string a, uint64_t b, int c, string d)
