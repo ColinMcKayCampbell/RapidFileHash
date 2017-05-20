@@ -11,7 +11,7 @@
 #include <experimental/filesystem> // Filesystem access
 namespace fs = std::experimental::filesystem;
 
-// Linux includes
+// Linux includes and declarations
 #elif __linux__
 #include <ftw.h>
 queue<string> pathQueue;
@@ -35,22 +35,23 @@ void getFiles(string dir, ThreadPool* Farmer) {
 	for (auto& p : fs::recursive_directory_iterator(dir)) { //For every filesystem entry in starting directory AND subdirectories
 		if (!fs::is_directory(experimental::filesystem::status(p)) && fs::exists(p)) { // If entry is not a directory
 			Farmer->AddTask(p.path().string(), fs::file_size(p), Farmer); //  Create a hash task for each file
-			totSize = totSize + fs::file_size(p);
+			totSize = totSize + fs::file_size(p); // Update total size
 		}
 	}
 	return;
 }
 
 #elif __linux__
+// Linux ftw callback function. Used to access filesystem information on files.
 void getLFiles(const char *fpath, const struct stat *sb, int typeflag){
 	if(typeflag == FTW_F){ // Check if file
-		string filePath(fpath);
+		string filePath(fpath); 
 		
-		if(sb->st_size!=0){
-		pathQueue.push(filePath);
-		sizeQueue.push(sb->st_size);		
+		if(sb->st_size!=0){ // If file size != 0
+		pathQueue.push(filePath); // Push file path onto path queue
+		sizeQueue.push(sb->st_size); // Push size onto size queue
 		}
-		totSize = totSize + sb->st_size;
+		totSize = totSize + sb->st_size; // Update total size
 	}
 	return;	
 }
@@ -60,37 +61,39 @@ int main(int argc, char* argv[])
 {
 	string dir;
 	// User introduction
-	cout << "---- Rapid File Hash ----\n\n\nPowerful SHA256 file hashing for digital forensics and malware detection.\nBuilt for high speed storage.\n\nWritten by Colin McKay Campbell. \nOpen source project can be found at github.com/ColinMcKayCampbell/RapidFileHash\n(Not public yet in this coursework build, check back after marking!)  \nAntivirus programs really don't like this.\nI suggest disabling real-time protection for the time being.\n\n";
-	cout << "This program will use all available CPU power and drive I/O.\nThis can generate large amounts of heat and slow your system to a crawl.\nPlease ensure you have sufficient cooling and are not running any important servers others are relying on.\nPress Enter to continue.\n";
-	getline(cin, dir);
+	cout << "---- Rapid File Hash ----\n\n\nPowerful SHA256 file hashing for digital forensics and malware detection.\nBuilt for high speed storage.\n\nWritten by Colin McKay Campbell. \nOpen source project can be found at github.com/ColinMcKayCampbell/RapidFileHash\n\n";
+	cout << "This program will use all available CPU power and drive I/O.\n\nPress Enter to continue.\n";
+	getline(cin, dir); // Used for the "Press enter to continue" functionality
 	cout << "Starting directory: ";
-	getline(cin, dir);
+	getline(cin, dir); // Actually used correctly to write path to "dir" string
 
-	ThreadPool CoreMuncher;
+	ThreadPool CoreMuncher; // Create ThreadPool object (tasks.h)
 	cout << "\nInitialising...\n";
+	// Set up output file
 	fstream fs;
 	fs.open("files.txt", fstream::trunc | fstream::out);
 	fs << "Rapid File Hash by Colin McKay Campbell\n\n\n";
 	fs.close();
 		
-		// Windows file acquisition
-		#ifdef _WIN32		
-		getFiles(dir, &CoreMuncher); // Get list of files to hash
-		// Linux file acquisition
-		#elif __linux__
-		ftw(dir.c_str(),getLFiles,16);
-		int queueSize = pathQueue.size();
-		for(int x = 0; x < queueSize; x++){
-			CoreMuncher.AddTask(pathQueue.front(),sizeQueue.front(),&CoreMuncher);
-			pathQueue.pop();
-			sizeQueue.pop();
-		}
-		CoreMuncher.SetReady(true);
-		#endif
-		the_clock::time_point start = the_clock::now(); // Start timer
-		CoreMuncher.Execute();
-		the_clock::time_point end = the_clock::now(); // End timer
-		auto time_taken = duration_cast<chrono::microseconds>(end - start).count(); // Get time taken as int
+	// Windows file acquisition
+	#ifdef _WIN32		
+	getFiles(dir, &CoreMuncher); // Get list of files to hash
+	// Linux file acquisition
+	#elif __linux__
+	ftw(dir.c_str(),getLFiles,16); // For each file found below starting directory execute getLFiles(), get 16 at once
+	int queueSize = pathQueue.size(); 
+	for(int x = 0; x < queueSize; x++){ // for each file found
+		CoreMuncher.AddTask(pathQueue.front(),sizeQueue.front(),&CoreMuncher); // Add task to farm 
+		pathQueue.pop(); // Delete entry used from queue
+		sizeQueue.pop();
+	}
+	#endif
+	// Start hashing.
+	the_clock::time_point start = the_clock::now(); // Start timer
+	CoreMuncher.Execute();
+	the_clock::time_point end = the_clock::now(); // End timer
+	auto time_taken = duration_cast<chrono::microseconds>(end - start).count(); // Get time taken as int
+	
 	float readableSize = totSize / 1000000;
 	if (readableSize > 0) {
 		cout << readableSize << " megabytes processed in " << time_taken /1000 << " milliseconds.\n";
