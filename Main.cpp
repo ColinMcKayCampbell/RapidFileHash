@@ -61,7 +61,7 @@ int main(int argc, char* argv[])
 {
 	string dir;
 	// User introduction
-	cout << "---- Rapid File Hash ----\n\n\nPowerful SHA256 file hashing for digital forensics and malware detection.\nBuilt for high speed storage.\n\nWritten by Colin McKay Campbell. \nOpen source project can be found at github.com/ColinMcKayCampbell/RapidFileHash\n\n";
+	cout << "---- Rapid File Hash ----\nBy Colin McKay Campbell\n\nPowerful SHA256 file hashing for digital forensics and malware detection.\ngithub.com/ColinMcKayCampbell/RapidFileHash\n\n";
 	cout << "This program will use all available CPU power and drive I/O.\n\nPress Enter to continue.\n";
 	getline(cin, dir); // Used for the "Press enter to continue" functionality
 	cout << "Starting directory: ";
